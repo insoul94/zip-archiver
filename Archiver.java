@@ -3,7 +3,6 @@ package com.javarush.task.task31.task3110;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Archiver {
