@@ -14,7 +14,7 @@ public class Archiver {
             } catch (WrongZipFileException e) {
                 ConsoleHelper.writeMessage("Вы не выбрали файл архива или выбрали неверный файл.");
             } catch (Exception e) {
-                ConsoleHelper.writeMessage("Произошла ошибка. Проверьте введенные данные.");
+                ConsoleHelper.writeMessage("Произошла ошибка. Проверьте введенные данные." + e.getMessage());
             }
         } while (operation != Operation.EXIT);
     }
