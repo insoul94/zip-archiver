@@ -19,7 +19,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class ZipFileManager {
-    // Полный путь zip файла
+    // ZIP file full path
     private final Path zipFile;
 
     public ZipFileManager(Path zipFile) {
@@ -27,29 +27,25 @@ public class ZipFileManager {
     }
 
     public void createZip(Path source) throws Exception {
-        // Проверяем, существует ли директория, где будет создаваться архив
-        // При необходимости создаем ее
+        // Create a directory for archive.
         createDirectories(zipFile.getParent());
 
-        // Создаем zip поток
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(zipFile))) {
 
             if (Files.isDirectory(source)) {
-                // Если архивируем директорию, то нужно получить список файлов в ней
+                // If a directory to be archived then get all files relative paths.
                 FileManager fileManager = new FileManager(source);
                 List<Path> relativeFilePaths = fileManager.getRelativePaths();
 
-                // Добавляем каждый файл в архив
-                for (Path relativeFilePath : relativeFilePaths)
+                // Add each file into archive.
+                for (Path relativeFilePath : relativeFilePaths) {
                     addNewZipEntry(zipOut, source, relativeFilePath);
+                }
 
             } else if (Files.isRegularFile(source)) {
-
-                // Если архивируем отдельный файл, то нужно получить его директорию и имя
+                // If a file to be archived then get its name and parent folder.
                 addNewZipEntry(zipOut, source.getParent(), source.getFileName());
             } else {
-
-                // Если переданный source не директория и не файл, бросаем исключение
                 throw new PathIsNotFoundException();
             }
         }
@@ -59,18 +55,19 @@ public class ZipFileManager {
         checkZipFileExists();
 
         try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))) {
-            // Создаем директорию вывода, если она не существует
+            // Create output directory if not exists.
             createDirectories(outputFolder);
 
-            // Проходимся по содержимому zip потока (файла)
+            // Iterate through all ZIP entries in ZIP file.
             ZipEntry zipEntry;
             while ((zipEntry = zipIn.getNextEntry()) != null) {
 
                 Path fileFullName = outputFolder.resolve(zipEntry.getName());
 
-                // Создаем необходимые директории
+                // Create directory for each file if needed.
                 createDirectories(fileFullName.getParent());
 
+                // Extract file data.
                 try (OutputStream outputStream = Files.newOutputStream(fileFullName)) {
                     copyData(zipIn, outputStream);
                 }
@@ -78,6 +75,7 @@ public class ZipFileManager {
         }
     }
 
+    /* Single file removal. */
     public void removeFile(Path path) throws Exception {
         removeFiles(Collections.singletonList(path));
     }
@@ -85,7 +83,7 @@ public class ZipFileManager {
     public void removeFiles(List<Path> pathList) throws Exception {
         checkZipFileExists();
 
-        // Создаем временный файл
+        // Create temporary archive.
         Path tempZipFile = Files.createTempFile(null, null);
 
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(tempZipFile));
@@ -94,20 +92,24 @@ public class ZipFileManager {
             ZipEntry zipEntry;
             while ((zipEntry = zipIn.getNextEntry()) != null) {
 
+                // Get relative file path inside the archive.
                 Path archivedFile = Paths.get(zipEntry.getName());
 
+                // Check if the file is in removal list.
                 if (!pathList.contains(archivedFile)) {
+                    // Transfer ZIP entry from old archive to temp archive.
                     transferZipEntry(zipIn, zipOut, zipEntry);
                 } else {
-                    ConsoleHelper.writeMessage(String.format("Файл '%s' удален из архива.", archivedFile));
+                    ConsoleHelper.writeMessage(String.format("Removed: '%s'", archivedFile));
                 }
             }
         }
 
-        // Перемещаем временный файл на место оригинального
+        // Replace old ZIP with temp ZIP.
         Files.move(tempZipFile, zipFile, StandardCopyOption.REPLACE_EXISTING);
     }
 
+    /* Adding a single file */
     public void addFile(Path absolutePath) throws Exception {
         addFiles(Collections.singletonList(absolutePath));
     }
@@ -115,9 +117,10 @@ public class ZipFileManager {
     public void addFiles(List<Path> absolutePaths) throws Exception {
         checkZipFileExists();
 
-        // Создаем временный файл
+        // Create a temporary ZIP file.
         Path tempZipFile = Files.createTempFile(null, null);
-        List<Path> archiveFiles = new ArrayList<>();
+        // File already in the archive.
+        List<Path> archivedFiles = new ArrayList<>();
 
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(tempZipFile))) {
             try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))) {
@@ -125,42 +128,45 @@ public class ZipFileManager {
                 ZipEntry zipEntry;
                 while ((zipEntry = zipIn.getNextEntry()) != null) {
 
+                    // Transfer ZIP entry from old archive to temp archive.
                     transferZipEntry(zipIn, zipOut, zipEntry);
-                    archiveFiles.add(Paths.get(zipEntry.getName()));
+                    archivedFiles.add(Paths.get(zipEntry.getName()));
                 }
             }
 
-            // Архивируем новые файлы
+            // Archiving new files.
+            //TODO: add directory into archive
             for (Path filePath : absolutePaths) {
 
                 if (Files.isRegularFile(filePath)) {
 
-                    if (archiveFiles.contains(filePath.getFileName())) {
-                        ConsoleHelper.writeMessage(String.format("Файл '%s' уже существует в архиве.", filePath));
+                    if (archivedFiles.contains(filePath.getFileName())) {
+                        ConsoleHelper.writeMessage(String.format("File '%s' already exists in the archive.", filePath));
                     } else {
                         addNewZipEntry(zipOut, filePath.getParent(), filePath.getFileName());
-                        ConsoleHelper.writeMessage(String.format("Файл '%s' добавлен в архиве.", filePath));
+                        ConsoleHelper.writeMessage(String.format("Added: '%s'", filePath));
                     }
 
-                } else
+                } else {
                     throw new PathIsNotFoundException();
+                }
             }
         }
 
-        // Перемещаем временный файл на место оригинального
+        // Replace old ZIP with temp ZIP.
         Files.move(tempZipFile, zipFile, StandardCopyOption.REPLACE_EXISTING);
     }
 
     public List<FileProperties> getFilePropertiesList() throws Exception {
         checkZipFileExists();
+
         List<FileProperties> filePropertiesList = new ArrayList<>();
 
         try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))) {
 
             ZipEntry zipEntry;
             while ((zipEntry = zipIn.getNextEntry()) != null) {
-                // Поля "размер" и "сжатый размер" не известны, пока элемент не будет прочитан
-                // Давайте вычитаем его в какой-то выходной поток
+                // Properties SIZE and COMPRESSED_SIZE are unknown until the file is read.
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 copyData(zipIn, baos);
 
@@ -212,6 +218,7 @@ public class ZipFileManager {
         }
     }
 
+    /* Check if directory exists and create if not, as well as all parent directories. */
     private void createDirectories(Path path) throws IOException {
         if (Files.notExists(path)) {
             Files.createDirectories(path);

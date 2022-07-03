@@ -12,8 +12,7 @@ public class ConsoleHelper {
     }
 
     public static String readString() throws IOException {
-        String text = bis.readLine();
-        return text;
+        return bis.readLine();
     }
 
     public static int readInt() throws IOException {
