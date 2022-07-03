@@ -13,10 +13,10 @@ public class ZipCreateCommand extends ZipCommand {
         try {
             ConsoleHelper.writeMessage("Создание архива.");
 
-            ZipFileManager zipFileManager = getZipFileManager();
-
             ConsoleHelper.writeMessage("Введите полное имя файла или директории для архивации:");
             Path sourcePath = Paths.get(ConsoleHelper.readString());
+
+            ZipFileManager zipFileManager = getZipFileManager();
             zipFileManager.createZip(sourcePath);
 
             ConsoleHelper.writeMessage("Архив создан.");

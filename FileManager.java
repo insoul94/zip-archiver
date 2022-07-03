@@ -9,26 +9,26 @@ import java.util.List;
 
 public class FileManager {
     private Path rootPath;
-    private List<Path> fileList;
+    private List<Path> relativePaths;
 
     public FileManager(Path rootPath) throws IOException {
         this.rootPath = rootPath;
-        this.fileList = new ArrayList<>();
-        collectFileList(rootPath);
+        this.relativePaths = new ArrayList<>();
+        collectRelativePaths(rootPath);
     }
 
-    public List<Path> getFileList() {
-        return fileList;
+    public List<Path> getRelativePaths() {
+        return relativePaths;
     }
 
-    private void collectFileList(Path path) throws IOException {
+    private void collectRelativePaths(Path path) throws IOException {
         if (Files.isRegularFile(path)) {
-            fileList.add(rootPath.relativize(path));
+            relativePaths.add(rootPath.relativize(path));
         }
         else if (Files.isDirectory(path)) {
             try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path)) {
                 for (Path entry : directoryStream) {
-                    collectFileList(entry);
+                    collectRelativePaths(entry);
                 }
             }
         }
